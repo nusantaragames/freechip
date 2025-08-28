@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Agar.io Mini Mobile</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #222; }
+    canvas { display: block; background: #333; }
+    #score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 100px;
+      z-index: 10;
+    }
+    /* Joystick */
+    #joystick {
+      position: absolute;
+      bottom: 100px;
+      left: 100px;
+      width: 100px;
+      height: 100px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 100%;
+      touch-action: none;
+    }
+    #stick {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      background: rgba(0,255,255,0.7);
+      border-radius: 100%;
+      top: 1px;
+      left:1px;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <div id="joystick"><div id="stick"></div></div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let player = { x: 0, y: 0, radius: 30, color: "cyan", speed: 2.5, score: 0 };
+
+    const foods = [];
+    const mapSize = 2500;
+
+    // Buat makanan
+    function spawnFoods(num) {
+      for (let i = 0; i < num; i++) {
+        foods.push({
+          x: Math.random() * mapSize - mapSize/2,
+          y: Math.random() * mapSize - mapSize/2,
+          radius: 5,
+          color: "hsl(" + Math.random()*360 + ",80%,50%)"
+        });
+      }
+    }
+    spawnFoods(400);
+
+    // Joystick virtual
+    const joystick = document.getElementById("joystick");
+    const stick = document.getElementById("stick");
+    let joy = { active: false, dx: 0, dy: 0 };
+
+    joystick.addEventListener("touchstart", e => {
+      joy.active = true;
+    });
+    joystick.addEventListener("touchend", e => {
+      joy.active = false;
+      joy.dx = 0; joy.dy = 0;
+      stick.style.top = "30px";
+      stick.style.left = "30px";
+    });
+    joystick.addEventListener("touchmove", e => {
+      e.preventDefault();
+      const rect = joystick.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left - rect.width/2;
+      const y = touch.clientY - rect.top - rect.height/2;
+      const dist = Math.min(Math.sqrt(x*x + y*y), rect.width/2 - 20);
+      const angle = Math.atan2(y, x);
+      joy.dx = Math.cos(angle) * (dist/40);
+      joy.dy = Math.sin(angle) * (dist/40);
+      stick.style.left = 5 + Math.cos(angle) * dist + "px";
+      stick.style.top = 5 + Math.sin(angle) * dist + "px";
+    });
+
+    function movePlayer() {
+      player.x += joy.dx * player.speed;
+      player.y += joy.dy * player.speed;
+    }
+
+    function drawFoods() {
+      for (let i = foods.length-1; i >= 0; i--) {
+        let f = foods[i];
+        let dx = f.x - player.x + canvas.width/2;
+        let dy = f.y - player.y + canvas.height/2;
+        ctx.beginPath();
+        ctx.arc(dx, dy, f.radius, 0, Math.PI*2);
+        ctx.fillStyle = f.color;
+        ctx.fill();
+
+        // makan
+        let dist = Math.hypot(f.x - player.x, f.y - player.y);
+        if (dist < player.radius) {
+          player.radius += 0.2;
+          player.score++;
+          foods.splice(i, 1);
+          document.getElementById("score").innerText = "Score: " + player.score;
+        }
+      }
+    }
+
+    function drawPlayer() {
+      ctx.beginPath();
+      ctx.arc(canvas.width/2, canvas.height/2, player.radius, 0, Math.PI*2);
+      ctx.fillStyle = player.color;
+      ctx.fill();
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = "#444";
+      for (let x = -mapSize/2; x < mapSize/2; x += 100) {
+        ctx.beginPath();
+        ctx.moveTo(x - player.x + canvas.width/2, -mapSize/2 - player.y + canvas.height/2);
+        ctx.lineTo(x - player.x + canvas.width/2, mapSize/2 - player.y + canvas.height/2);
+        ctx.stroke();
+      }
+      for (let y = -mapSize/2; y < mapSize/2; y += 100) {
+        ctx.beginPath();
+        ctx.moveTo(-mapSize/2 - player.x + canvas.width/2, y - player.y + canvas.height/2);
+        ctx.lineTo(mapSize/2 - player.x + canvas.width/2, y - player.y + canvas.height/2);
+        ctx.stroke();
+      }
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawGrid();
+      movePlayer();
+      drawFoods();
+      drawPlayer();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
