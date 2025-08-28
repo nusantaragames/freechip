@@ -2,58 +2,142 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agar.io Mini Mobile</title>
+  <title>Agar.io Mini Mobile - Dengan Musik</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { margin: 0; overflow: hidden; background: #222; }
+    body { margin: 0; overflow: hidden; background: #222; font-family: Arial, sans-serif; }
     canvas { display: block; background: #333; }
-    #score {
+
+    /* HUD */
+    #hud {
       position: absolute;
-      top: -30px;
-      left: 10px;
-      color: white;
-      font-family: Arial, sans-serif;
-      font-size: 80px;
-      z-index: 30;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      z-index: 50;
+      pointer-events: none;
     }
+    #score {
+      color: white;
+      font-size: 18px;
+      pointer-events: auto;
+      user-select: none;
+    }
+    #audioControls {
+      pointer-events: auto;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: white;
+      padding:6px 10px;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .btn:active { transform: translateY(1px); }
+
     /* Joystick */
     #joystick {
       position: absolute;
-      bottom: 200px;
-      left: 200px;
-      width: 200px;
-      height: 200px;
-      background: rgba(255,255,255,0.1);
+      bottom: 40px;
+      left: 40px;
+      width: 100px;
+      height: 100px;
+      background: rgba(255,255,255,0.06);
       border-radius: 50%;
       touch-action: none;
+      z-index: 40;
     }
     #stick {
       position: absolute;
-      width: 100px;
-      height: 100px;
-      background: rgba(0,255,255,0.7);
+      width: 40px;
+      height: 40px;
+      background: rgba(0,255,255,0.75);
       border-radius: 50%;
-      top: 100px;
-      left: 100px;
+      top: 30px;
+      left: 30px;
+    }
+
+    /* Tap-to-start overlay for mobile/autoplay */
+    #startOverlay {
+      position: absolute;
+      inset: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      color: white;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #startOverlay .startBtn {
+      background: #06b6d4;
+      color: #022;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* small screens: shrink joystick */
+    @media (max-width:420px) {
+      #joystick { width: 80px; height: 80px; }
+      #stick { width: 34px; height: 34px; top: 23px; left: 23px; }
     }
   </style>
 </head>
 <body>
-  <div id="score">Score: 0</div>
+  <div id="hud">
+    <div id="score">Score: 0</div>
+    <div id="audioControls">
+      <button id="playPauseBtn" class="btn">Play</button>
+      <button id="muteBtn" class="btn">Mute</button>
+      <label style="color:white;font-size:13px;">Vol
+        <input id="volSlider" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;">
+      </label>
+    </div>
+  </div>
+
+  <div id="startOverlay">
+    <h2 style="margin:0">Agar.io Mini</h2>
+    <div style="opacity:0.9">Tap to start (enable audio)</div>
+    <button id="startBtn" class="startBtn">Tap to Start</button>
+    <div style="font-size:13px;opacity:0.8">Use joystick (left) to move</div>
+  </div>
+
   <div id="joystick"><div id="stick"></div></div>
   <canvas id="gameCanvas"></canvas>
 
+  <!-- Audio files: letakkan bg-music.mp3 & eat.wav di folder proyek -->
+  <audio id="bgMusic" src="bg-music.mp3" loop preload="auto"></audio>
+  <audio id="eatSfx" src="eat.wav" preload="auto"></audio>
+
   <script>
+    // --- Canvas & resize ---
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    function fitCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', fitCanvas);
+    fitCanvas();
 
+    // --- Game state (same seperti versi sebelumnya) ---
     let player = { x: 0, y: 0, radius: 30, color: "cyan", speed: 2.5, score: 0 };
-
     const foods = [];
     const mapSize = 2500;
 
-    // Buat makanan
     function spawnFoods(num) {
       for (let i = 0; i < num; i++) {
         foods.push({
@@ -66,19 +150,19 @@
     }
     spawnFoods(400);
 
-    // Joystick virtual
+    // --- Joystick ---
     const joystick = document.getElementById("joystick");
     const stick = document.getElementById("stick");
     let joy = { active: false, dx: 0, dy: 0 };
 
     joystick.addEventListener("touchstart", e => {
       joy.active = true;
-    });
+    }, {passive:false});
     joystick.addEventListener("touchend", e => {
       joy.active = false;
       joy.dx = 0; joy.dy = 0;
-      stick.style.top = "30px";
-      stick.style.left = "30px";
+      stick.style.top = (joystick.clientHeight - stick.clientHeight)/2 + "px";
+      stick.style.left = (joystick.clientWidth - stick.clientWidth)/2 + "px";
     });
     joystick.addEventListener("touchmove", e => {
       e.preventDefault();
@@ -90,15 +174,75 @@
       const angle = Math.atan2(y, x);
       joy.dx = Math.cos(angle) * (dist/40);
       joy.dy = Math.sin(angle) * (dist/40);
-      stick.style.left = 30 + Math.cos(angle) * dist + "px";
-      stick.style.top = 30 + Math.sin(angle) * dist + "px";
-    });
+      stick.style.left = (rect.width - stick.clientWidth)/2 + Math.cos(angle) * dist + "px";
+      stick.style.top = (rect.height - stick.clientHeight)/2 + Math.sin(angle) * dist + "px";
+    }, {passive:false});
+
+    // initialize stick center
+    stick.style.left = (joystick.clientWidth - stick.clientWidth)/2 + "px";
+    stick.style.top = (joystick.clientHeight - stick.clientHeight)/2 + "px";
 
     function movePlayer() {
       player.x += joy.dx * player.speed;
       player.y += joy.dy * player.speed;
     }
 
+    // --- Audio setup ---
+    const bgMusic = document.getElementById('bgMusic');
+    const eatSfx = document.getElementById('eatSfx');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const volSlider = document.getElementById('volSlider');
+    const startOverlay = document.getElementById('startOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const scoreElem = document.getElementById('score');
+
+    // initial volume
+    bgMusic.volume = parseFloat(volSlider.value);
+    eatSfx.volume = Math.min(1, parseFloat(volSlider.value) + 0.1);
+
+    // Play/pause controls
+    playPauseBtn.addEventListener('click', () => {
+      if (bgMusic.paused) {
+        bgMusic.play().catch(()=>{ /* silent if blocked */ });
+        playPauseBtn.innerText = 'Pause';
+      } else {
+        bgMusic.pause();
+        playPauseBtn.innerText = 'Play';
+      }
+    });
+
+    muteBtn.addEventListener('click', () => {
+      bgMusic.muted = !bgMusic.muted;
+      eatSfx.muted = bgMusic.muted;
+      muteBtn.innerText = bgMusic.muted ? 'Unmute' : 'Mute';
+    });
+
+    volSlider.addEventListener('input', () => {
+      const v = parseFloat(volSlider.value);
+      bgMusic.volume = v;
+      eatSfx.volume = Math.min(1, v + 0.1);
+    });
+
+    // Start overlay handler (required by mobile autoplay policy)
+    startBtn.addEventListener('click', async () => {
+      // try to play a short sound to unlock audio on mobile
+      try {
+        await bgMusic.play();
+        bgMusic.pause(); // pause now; we'll control playback via buttons / auto-play setting
+      } catch (e) {
+        // ignore
+      }
+      startOverlay.style.display = 'none';
+      // optionally auto-play background music
+      bgMusic.play().then(()=> {
+        playPauseBtn.innerText = 'Pause';
+      }).catch(()=> {
+        playPauseBtn.innerText = 'Play';
+      });
+    });
+
+    // --- Game rendering & logic ---
     function drawFoods() {
       for (let i = foods.length-1; i >= 0; i--) {
         let f = foods[i];
@@ -114,8 +258,14 @@
         if (dist < player.radius) {
           player.radius += 0.2;
           player.score++;
+          // play eat sound (clone for overlapping)
+          try {
+            const s = eatSfx.cloneNode();
+            s.volume = Math.min(1, parseFloat(volSlider.value) + 0.1);
+            s.play().catch(()=>{});
+          } catch (e) {}
           foods.splice(i, 1);
-          document.getElementById("score").innerText = "Score: " + player.score;
+          scoreElem.innerText = "Score: " + player.score;
         }
       }
     }
@@ -129,6 +279,7 @@
 
     function drawGrid() {
       ctx.strokeStyle = "#444";
+      ctx.lineWidth = 1;
       for (let x = -mapSize/2; x < mapSize/2; x += 100) {
         ctx.beginPath();
         ctx.moveTo(x - player.x + canvas.width/2, -mapSize/2 - player.y + canvas.height/2);
@@ -153,11 +304,20 @@
     }
 
     gameLoop();
+
+    // --- Small fallback / UX niceties ---
+    // Hide overlay if user clicks anywhere (desktop)
+    document.addEventListener('click', ()=> {
+      if (startOverlay.style.display !== 'none') {
+        startOverlay.style.display = 'none';
+        bgMusic.play().then(()=> playPauseBtn.innerText='Pause').catch(()=> playPauseBtn.innerText='Play');
+      }
+    }, {once:true});
+
+    // Prevent scrolling when touching joystick
+    document.body.addEventListener('touchmove', function(e){
+      // allow normal scrolling except when interacting joystick
+    }, {passive:false});
   </script>
 </body>
 </html>
-
-
-
-
-
