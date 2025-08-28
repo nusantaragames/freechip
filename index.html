@@ -188,7 +188,7 @@
     }
 
     // --- Audio setup ---
-    const bgMusic = document.getElementById('bgMusic');
+    const eat = document.getElementById('bgMusic');
     const eatSfx = document.getElementById('eatSfx');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const muteBtn = document.getElementById('muteBtn');
@@ -198,29 +198,29 @@
     const scoreElem = document.getElementById('score');
 
     // initial volume
-    bgMusic.volume = parseFloat(volSlider.value);
+    eat.volume = parseFloat(volSlider.value);
     eatSfx.volume = Math.min(1, parseFloat(volSlider.value) + 0.1);
 
     // Play/pause controls
     playPauseBtn.addEventListener('click', () => {
       if (bgMusic.paused) {
-        bgMusic.play().catch(()=>{ /* silent if blocked */ });
+       eat.play().catch(()=>{ /* silent if blocked */ });
         playPauseBtn.innerText = 'Pause';
       } else {
-        bgMusic.pause();
+       eat.pause();
         playPauseBtn.innerText = 'Play';
       }
     });
 
     muteBtn.addEventListener('click', () => {
-      bgMusic.muted = !bgMusic.muted;
+      eat.muted = !bgMusic.muted;
       eatSfx.muted = bgMusic.muted;
       muteBtn.innerText = bgMusic.muted ? 'Unmute' : 'Mute';
     });
 
     volSlider.addEventListener('input', () => {
       const v = parseFloat(volSlider.value);
-      bgMusic.volume = v;
+     eat.volume = v;
       eatSfx.volume = Math.min(1, v + 0.1);
     });
 
@@ -229,13 +229,13 @@
       // try to play a short sound to unlock audio on mobile
       try {
         await bgMusic.play();
-        bgMusic.pause(); // pause now; we'll control playback via buttons / auto-play setting
+       eat.pause(); // pause now; we'll control playback via buttons / auto-play setting
       } catch (e) {
         // ignore
       }
       startOverlay.style.display = 'none';
       // optionally auto-play background music
-      bgMusic.play().then(()=> {
+     eat.play().then(()=> {
         playPauseBtn.innerText = 'Pause';
       }).catch(()=> {
         playPauseBtn.innerText = 'Play';
@@ -310,7 +310,7 @@
     document.addEventListener('click', ()=> {
       if (startOverlay.style.display !== 'none') {
         startOverlay.style.display = 'none';
-        bgMusic.play().then(()=> playPauseBtn.innerText='Pause').catch(()=> playPauseBtn.innerText='Play');
+       eat.play().then(()=> playPauseBtn.innerText='Pause').catch(()=> playPauseBtn.innerText='Play');
       }
     }, {once:true});
 
@@ -321,4 +321,5 @@
   </script>
 </body>
 </html>
+
 
