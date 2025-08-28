@@ -2,322 +2,170 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agar.io Mini Mobile - Dengan Musik</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Agar.io Mini</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #222; font-family: Arial, sans-serif; }
-    canvas { display: block; background: #333; }
-
-    /* HUD */
-    #hud {
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #222;
+      color: #fff;
+      text-align: center;
+    }
+    #menu {
       position: absolute;
-      top: 8px;
-      left: 8px;
-      right: 8px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      z-index: 50;
-      pointer-events: none;
-    }
-    #score {
-      color: white;
-      font-size: 18px;
-      pointer-events: auto;
-      user-select: none;
-    }
-    #audioControls {
-      pointer-events: auto;
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .btn {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: white;
-      padding:6px 10px;
-      border-radius:6px;
-      cursor:pointer;
-      font-size:14px;
-    }
-    .btn:active { transform: translateY(1px); }
-
-    /* Joystick */
-    #joystick {
-      position: absolute;
-      bottom: 40px;
-      left: 40px;
-      width: 100px;
-      height: 100px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 50%;
-      touch-action: none;
-      z-index: 40;
-    }
-    #stick {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      background: rgba(0,255,255,0.75);
-      border-radius: 50%;
-      top: 30px;
-      left: 30px;
-    }
-
-    /* Tap-to-start overlay for mobile/autoplay */
-    #startOverlay {
-      position: absolute;
-      inset: 0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: rgba(0,0,0,0.6);
-      z-index: 100;
-      color: white;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
       flex-direction: column;
-      gap: 12px;
+      z-index: 10;
     }
-    #startOverlay .startBtn {
-      background: #06b6d4;
-      color: #022;
-      padding: 12px 18px;
-      border-radius: 10px;
-      font-weight: bold;
-      font-size: 16px;
+    #menu h1 { font-size: 3em; margin-bottom: 20px; }
+    .btn {
+      background: #4CAF50;
+      color: white;
       border: none;
+      padding: 15px 30px;
+      margin: 10px;
+      border-radius: 10px;
+      font-size: 1.2em;
       cursor: pointer;
+      transition: 0.3s;
     }
-
-    /* small screens: shrink joystick */
-    @media (max-width:420px) {
-      #joystick { width: 80px; height: 80px; }
-      #stick { width: 34px; height: 34px; top: 23px; left: 23px; }
+    .btn:hover { background: #45a049; }
+    canvas {
+      background: #111;
+      display: block;
     }
   </style>
 </head>
 <body>
-  <div id="hud">
-    <div id="score">Score: 0</div>
-    <div id="audioControls">
-      <button id="playPauseBtn" class="btn">Play</button>
-      <button id="muteBtn" class="btn">Mute</button>
-      <label style="color:white;font-size:13px;">Vol
-        <input id="volSlider" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;">
-      </label>
-    </div>
-  </div>
 
-  <div id="startOverlay">
-    <h2 style="margin:0">Agar.io Mini</h2>
-    <div style="opacity:0.9">Tap to start (enable audio)</div>
-    <button id="startBtn" class="startBtn">Tap to Start</button>
-    <div style="font-size:13px;opacity:0.8">Use joystick (left) to move</div>
-  </div>
+<div id="menu">
+  <h1>Agar.io Mini</h1>
+  <button id="playBtn" class="btn">Play</button>
+  <button id="muteBtn" class="btn">Mute Music</button>
+  <button id="exitBtn" class="btn">Exit</button>
+</div>
 
-  <div id="joystick"><div id="stick"></div></div>
-  <canvas id="gameCanvas"></canvas>
+<canvas id="gameCanvas"></canvas>
 
-  <!-- Audio files: letakkan bg-music.mp3 & eat.wav di folder proyek -->
-  <audio id="bgMusic" src="bg-music.mp3" loop preload="auto"></audio>
-  <audio id="eatSfx" src="eat.wav" preload="auto"></audio>
+<!-- Musik & SFX -->
+<audio id="bgMusic" src="https://cdn.pixabay.com/download/audio/2023/05/29/audio_6ed5b59e6d.mp3?filename=arcade-113449.mp3" loop preload="auto"></audio>
+<audio id="eatSfx" src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_bff6120e85.mp3?filename=pop-94319.mp3" preload="auto"></audio>
 
-  <script>
-    // --- Canvas & resize ---
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    function fitCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', fitCanvas);
-    fitCanvas();
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-    // --- Game state (same seperti versi sebelumnya) ---
-    let player = { x: 0, y: 0, radius: 30, color: "cyan", speed: 2.5, score: 0 };
-    const foods = [];
-    const mapSize = 2500;
+let player = { x: canvas.width/2, y: canvas.height/2, r: 20, speed: 3, color: "lime" };
+let foods = [];
+let keys = {};
+let playing = false;
 
-    function spawnFoods(num) {
-      for (let i = 0; i < num; i++) {
-        foods.push({
-          x: Math.random() * mapSize - mapSize/2,
-          y: Math.random() * mapSize - mapSize/2,
-          radius: 5,
-          color: "hsl(" + Math.random()*360 + ",80%,50%)"
-        });
-      }
-    }
-    spawnFoods(400);
+const bgMusic = document.getElementById("bgMusic");
+const eatSfx = document.getElementById("eatSfx");
+let muted = false;
 
-    // --- Joystick ---
-    const joystick = document.getElementById("joystick");
-    const stick = document.getElementById("stick");
-    let joy = { active: false, dx: 0, dy: 0 };
-
-    joystick.addEventListener("touchstart", e => {
-      joy.active = true;
-    }, {passive:false});
-    joystick.addEventListener("touchend", e => {
-      joy.active = false;
-      joy.dx = 0; joy.dy = 0;
-      stick.style.top = (joystick.clientHeight - stick.clientHeight)/2 + "px";
-      stick.style.left = (joystick.clientWidth - stick.clientWidth)/2 + "px";
+// buat makanan random
+function spawnFoods(n=20) {
+  foods = [];
+  for (let i=0;i<n;i++) {
+    foods.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height,
+      r: 5 + Math.random()*5,
+      color: "hsl(" + Math.random()*360 + ",80%,60%)"
     });
-    joystick.addEventListener("touchmove", e => {
-      e.preventDefault();
-      const rect = joystick.getBoundingClientRect();
-      const touch = e.touches[0];
-      const x = touch.clientX - rect.left - rect.width/2;
-      const y = touch.clientY - rect.top - rect.height/2;
-      const dist = Math.min(Math.sqrt(x*x + y*y), rect.width/2 - 20);
-      const angle = Math.atan2(y, x);
-      joy.dx = Math.cos(angle) * (dist/40);
-      joy.dy = Math.sin(angle) * (dist/40);
-      stick.style.left = (rect.width - stick.clientWidth)/2 + Math.cos(angle) * dist + "px";
-      stick.style.top = (rect.height - stick.clientHeight)/2 + Math.sin(angle) * dist + "px";
-    }, {passive:false});
+  }
+}
 
-    // initialize stick center
-    stick.style.left = (joystick.clientWidth - stick.clientWidth)/2 + "px";
-    stick.style.top = (joystick.clientHeight - stick.clientHeight)/2 + "px";
+function drawPlayer() {
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+  ctx.fillStyle = player.color;
+  ctx.fill();
+}
 
-    function movePlayer() {
-      player.x += joy.dx * player.speed;
-      player.y += joy.dy * player.speed;
+function drawFoods() {
+  for (let f of foods) {
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+    ctx.fillStyle = f.color;
+    ctx.fill();
+  }
+}
+
+function update() {
+  if (keys["ArrowUp"]) player.y -= player.speed;
+  if (keys["ArrowDown"]) player.y += player.speed;
+  if (keys["ArrowLeft"]) player.x -= player.speed;
+  if (keys["ArrowRight"]) player.x += player.speed;
+
+  // batas canvas
+  player.x = Math.max(player.r, Math.min(canvas.width-player.r, player.x));
+  player.y = Math.max(player.r, Math.min(canvas.height-player.r, player.y));
+
+  // cek makan makanan
+  for (let i = foods.length-1; i>=0; i--) {
+    let f = foods[i];
+    let dx = player.x - f.x;
+    let dy = player.y - f.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < player.r + f.r) {
+      player.r += 0.5; // tambah besar
+      foods.splice(i,1);
+      let s = eatSfx.cloneNode(); // biar bisa overlap
+      if (!muted) s.play();
     }
+  }
+  if (foods.length < 10) spawnFoods(10);
+}
 
-    // --- Audio setup ---
-    const bgMusic = document.getElementById('bgMusic');
-    const eatSfx = document.getElementById('eatSfx');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const muteBtn = document.getElementById('muteBtn');
-    const volSlider = document.getElementById('volSlider');
-    const startOverlay = document.getElementById('startOverlay');
-    const startBtn = document.getElementById('startBtn');
-    const scoreElem = document.getElementById('score');
+function gameLoop() {
+  if (!playing) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  update();
+  drawFoods();
+  drawPlayer();
+  requestAnimationFrame(gameLoop);
+}
 
-    // initial volume
-    bgMusic.volume = parseFloat(volSlider.value);
-    eatSfx.volume = Math.min(1, parseFloat(volSlider.value) + 0.1);
+// event kontrol
+document.addEventListener("keydown", e => keys[e.key]=true);
+document.addEventListener("keyup", e => keys[e.key]=false);
 
-    // Play/pause controls
-    playPauseBtn.addEventListener('click', () => {
-      if (bgMusic.paused) {
-        bgMusic.play().catch(()=>{ /* silent if blocked */ });
-        playPauseBtn.innerText = 'Pause';
-      } else {
-        bgMusic.pause();
-        playPauseBtn.innerText = 'Play';
-      }
-    });
+// menu
+const menu = document.getElementById("menu");
+document.getElementById("playBtn").onclick = () => {
+  menu.style.display = "none";
+  playing = true;
+  spawnFoods(20);
+  if (!muted) bgMusic.play().catch(()=>{});
+  gameLoop();
+};
+document.getElementById("muteBtn").onclick = () => {
+  muted = !muted;
+  if (muted) {
+    bgMusic.pause();
+    document.getElementById("muteBtn").innerText = "Unmute Music";
+  } else {
+    bgMusic.play().catch(()=>{});
+    document.getElementById("muteBtn").innerText = "Mute Music";
+  }
+};
+document.getElementById("exitBtn").onclick = () => {
+  playing = false;
+  menu.style.display = "flex";
+  bgMusic.pause();
+  player = { x: canvas.width/2, y: canvas.height/2, r: 20, speed: 3, color: "lime" };
+};
+</script>
 
-    muteBtn.addEventListener('click', () => {
-      bgMusic.muted = !bgMusic.muted;
-      eatSfx.muted = bgMusic.muted;
-      muteBtn.innerText = bgMusic.muted ? 'Unmute' : 'Mute';
-    });
-
-    volSlider.addEventListener('input', () => {
-      const v = parseFloat(volSlider.value);
-      bgMusic.volume = v;
-      eatSfx.volume = Math.min(1, v + 0.1);
-    });
-
-    // Start overlay handler (required by mobile autoplay policy)
-    startBtn.addEventListener('click', async () => {
-      // try to play a short sound to unlock audio on mobile
-      try {
-        await bgMusic.play();
-        bgMusic.pause(); // pause now; we'll control playback via buttons / auto-play setting
-      } catch (e) {
-        // ignore
-      }
-      startOverlay.style.display = 'none';
-      // optionally auto-play background music
-      bgMusic.play().then(()=> {
-        playPauseBtn.innerText = 'Pause';
-      }).catch(()=> {
-        playPauseBtn.innerText = 'Play';
-      });
-    });
-
-    // --- Game rendering & logic ---
-    function drawFoods() {
-      for (let i = foods.length-1; i >= 0; i--) {
-        let f = foods[i];
-        let dx = f.x - player.x + canvas.width/2;
-        let dy = f.y - player.y + canvas.height/2;
-        ctx.beginPath();
-        ctx.arc(dx, dy, f.radius, 0, Math.PI*2);
-        ctx.fillStyle = f.color;
-        ctx.fill();
-
-        // makan
-        let dist = Math.hypot(f.x - player.x, f.y - player.y);
-        if (dist < player.radius) {
-          player.radius += 0.2;
-          player.score++;
-          // play eat sound (clone for overlapping)
-          try {
-            const s = eatSfx.cloneNode();
-            s.volume = Math.min(1, parseFloat(volSlider.value) + 0.1);
-            s.play().catch(()=>{});
-          } catch (e) {}
-          foods.splice(i, 1);
-          scoreElem.innerText = "Score: " + player.score;
-        }
-      }
-    }
-
-    function drawPlayer() {
-      ctx.beginPath();
-      ctx.arc(canvas.width/2, canvas.height/2, player.radius, 0, Math.PI*2);
-      ctx.fillStyle = player.color;
-      ctx.fill();
-    }
-
-    function drawGrid() {
-      ctx.strokeStyle = "#444";
-      ctx.lineWidth = 1;
-      for (let x = -mapSize/2; x < mapSize/2; x += 100) {
-        ctx.beginPath();
-        ctx.moveTo(x - player.x + canvas.width/2, -mapSize/2 - player.y + canvas.height/2);
-        ctx.lineTo(x - player.x + canvas.width/2, mapSize/2 - player.y + canvas.height/2);
-        ctx.stroke();
-      }
-      for (let y = -mapSize/2; y < mapSize/2; y += 100) {
-        ctx.beginPath();
-        ctx.moveTo(-mapSize/2 - player.x + canvas.width/2, y - player.y + canvas.height/2);
-        ctx.lineTo(mapSize/2 - player.x + canvas.width/2, y - player.y + canvas.height/2);
-        ctx.stroke();
-      }
-    }
-
-    function gameLoop() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      drawGrid();
-      movePlayer();
-      drawFoods();
-      drawPlayer();
-      requestAnimationFrame(gameLoop);
-    }
-
-    gameLoop();
-
-    // --- Small fallback / UX niceties ---
-    // Hide overlay if user clicks anywhere (desktop)
-    document.addEventListener('click', ()=> {
-      if (startOverlay.style.display !== 'none') {
-        startOverlay.style.display = 'none';
-        bgMusic.play().then(()=> playPauseBtn.innerText='Pause').catch(()=> playPauseBtn.innerText='Play');
-      }
-    }, {once:true});
-
-    // Prevent scrolling when touching joystick
-    document.body.addEventListener('touchmove', function(e){
-      // allow normal scrolling except when interacting joystick
-    }, {passive:false});
-  </script>
 </body>
 </html>
