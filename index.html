@@ -119,7 +119,7 @@
   <canvas id="gameCanvas"></canvas>
 
   <!-- Audio files: letakkan bg-music.mp3 & eat.wav di folder proyek -->
-  <audio id="eat" src="eat.mp3" loop preload="auto"></audio>
+  <audio id="bgMusic" src="bg-music.mp3" loop preload="auto"></audio>
   <audio id="eatSfx" src="eat.wav" preload="auto"></audio>
 
   <script>
@@ -188,7 +188,7 @@
     }
 
     // --- Audio setup ---
-    const eat = document.getElementById('bgMusic');
+    const bgMusic = document.getElementById('bgMusic');
     const eatSfx = document.getElementById('eatSfx');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const muteBtn = document.getElementById('muteBtn');
@@ -198,29 +198,29 @@
     const scoreElem = document.getElementById('score');
 
     // initial volume
-    eat.volume = parseFloat(volSlider.value);
+    bgMusic.volume = parseFloat(volSlider.value);
     eatSfx.volume = Math.min(1, parseFloat(volSlider.value) + 0.1);
 
     // Play/pause controls
     playPauseBtn.addEventListener('click', () => {
       if (bgMusic.paused) {
-       eat.play().catch(()=>{ /* silent if blocked */ });
+        bgMusic.play().catch(()=>{ /* silent if blocked */ });
         playPauseBtn.innerText = 'Pause';
       } else {
-       eat.pause();
+        bgMusic.pause();
         playPauseBtn.innerText = 'Play';
       }
     });
 
     muteBtn.addEventListener('click', () => {
-      eat.muted = !bgMusic.muted;
+      bgMusic.muted = !bgMusic.muted;
       eatSfx.muted = bgMusic.muted;
       muteBtn.innerText = bgMusic.muted ? 'Unmute' : 'Mute';
     });
 
     volSlider.addEventListener('input', () => {
       const v = parseFloat(volSlider.value);
-     eat.volume = v;
+      bgMusic.volume = v;
       eatSfx.volume = Math.min(1, v + 0.1);
     });
 
@@ -229,13 +229,13 @@
       // try to play a short sound to unlock audio on mobile
       try {
         await bgMusic.play();
-       eat.pause(); // pause now; we'll control playback via buttons / auto-play setting
+        bgMusic.pause(); // pause now; we'll control playback via buttons / auto-play setting
       } catch (e) {
         // ignore
       }
       startOverlay.style.display = 'none';
       // optionally auto-play background music
-     eat.play().then(()=> {
+      bgMusic.play().then(()=> {
         playPauseBtn.innerText = 'Pause';
       }).catch(()=> {
         playPauseBtn.innerText = 'Play';
@@ -310,7 +310,7 @@
     document.addEventListener('click', ()=> {
       if (startOverlay.style.display !== 'none') {
         startOverlay.style.display = 'none';
-       eat.play().then(()=> playPauseBtn.innerText='Pause').catch(()=> playPauseBtn.innerText='Play');
+        bgMusic.play().then(()=> playPauseBtn.innerText='Pause').catch(()=> playPauseBtn.innerText='Play');
       }
     }, {once:true});
 
@@ -321,5 +321,3 @@
   </script>
 </body>
 </html>
-
-
